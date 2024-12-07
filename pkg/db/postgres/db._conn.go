@@ -1,10 +1,11 @@
-package storage
+package postgres
 
 import (
 	"embed"
 	"errors"
 	"fmt"
-	"music-library/internal/logger"
+	"music-library/config"
+	"music-library/pkg/logger"
 
 	"database/sql"
 
@@ -16,22 +17,16 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-type Storage struct {
-	db *sql.DB
-}
-
-func InitDB(cfg Config) (*Storage, error) {
+func InitDB(cfg *config.Config) (*sql.DB, error) {
 	log := logger.GetLogger()
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.User,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.DBName,
+		cfg.SSLMode,
+	)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -45,7 +40,7 @@ func InitDB(cfg Config) (*Storage, error) {
 		log.Fatalf("Error: Unable to do migrations: %s", err)
 	}
 
-	return &Storage{db: db}, nil
+	return db, nil
 }
 
 const migrationsDir = "migrations"

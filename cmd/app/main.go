@@ -1,25 +1,19 @@
 package main
 
 import (
-	"errors"
-	"net/http"
-	"os"
-
-	"music-library/internal/config"
-	httpserver "music-library/internal/http-server"
-	"music-library/internal/logger"
+	"music-library/config"
 	"music-library/internal/server"
-	"music-library/internal/service"
-	"music-library/internal/storage"
+	"music-library/pkg/db/postgres"
+	"music-library/pkg/logger"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	// init logger
 	log := logger.GetLogger()
 
 	// init config
-
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("error loading .env file")
@@ -28,33 +22,19 @@ func main() {
 	cfg := config.MustLoad()
 
 	// init storage
-
-	storage, err := storage.InitDB(storage.Config(cfg.Storage))
+	psqlDB, err := postgres.InitDB(cfg)
 	if err != nil {
-		log.Error("failed to init storage", err)
-		os.Exit(1)
+		log.Fatal("failed to init storage", err)
 	}
+	defer psqlDB.Close()
+
 	log.Info("starting storage")
 
-	service, err := service.New(cfg, storage)
-	if err != nil {
-		log.Error("failed to init service", err)
-		os.Exit(1)
+	// init server
+	s := server.NewServer(cfg, psqlDB, log)
+	if err = s.Run(); err != nil {
+		log.Fatal(err)
 	}
-
-	h := httpserver.New(cfg, service)
-
-	srv := server.New(cfg, h)
-
-	go func() {
-		if err := srv.Run(); !errors.Is(err, http.ErrServerClosed) {
-			log.Error("failed to init http server", err)
-			os.Exit(1)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	<-quit
 
 	log.Info("Server stopped")
 }

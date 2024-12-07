@@ -7,7 +7,7 @@ import (
 
 type Config struct {
 	Storage
-	HTTPServer
+	Server
 }
 
 type Storage struct {
@@ -18,7 +18,7 @@ type Storage struct {
 	DBName   string
 	SSLMode  string
 }
-type HTTPServer struct {
+type Server struct {
 	Address     string
 	Timeout     time.Duration
 	IdleTimeout time.Duration
@@ -34,7 +34,7 @@ func MustLoad() *Config {
 			DBName:   getEnv("DB_NAME", ""),
 			SSLMode:  getEnv("DB_SSLMODE", ""),
 		},
-		HTTPServer: HTTPServer{
+		Server: Server{
 			Address:     getEnv("address", ""),
 			Timeout:     getEnvAsTime("timeout", "4s"),
 			IdleTimeout: getEnvAsTime("idle_timeout", "60s"),

@@ -1,37 +1,98 @@
 package logger
 
 import (
-	"log"
-	"os"
-	"sync"
+	"context"
+	"encoding/json"
+	"io"
+	stdLog "log"
+	"log/slog"
 
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
+	"github.com/fatih/color"
 )
 
-var (
-	instance *logrus.Logger
-	once     sync.Once
-)
+type PrettyHandlerOptions struct {
+	SlogOpts *slog.HandlerOptions
+}
 
-// GetLogger возвращает общий логгер
-func GetLogger() *logrus.Logger {
-	once.Do(func() {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("error: Loading .env file")
-		}
+type PrettyHandler struct {
+	opts PrettyHandlerOptions
+	slog.Handler
+	l     *stdLog.Logger
+	attrs []slog.Attr
+}
 
-		level := os.Getenv("LOG_LEVEL")
+func (opts PrettyHandlerOptions) NewPrettyHandler(
+	out io.Writer,
+) *PrettyHandler {
+	h := &PrettyHandler{
+		Handler: slog.NewJSONHandler(out, opts.SlogOpts),
+		l:       stdLog.New(out, "", 0),
+	}
 
-		parsedLevel, err := logrus.ParseLevel(level)
-		if err != nil {
-			log.Fatalf("Invalid log level: %v", err)
-		}
+	return h
+}
 
-		instance = logrus.New()
-		instance.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-		instance.SetLevel(parsedLevel)
+func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
+	level := r.Level.String() + ":"
+
+	switch r.Level {
+	case slog.LevelDebug:
+		level = color.MagentaString(level)
+	case slog.LevelInfo:
+		level = color.BlueString(level)
+	case slog.LevelWarn:
+		level = color.YellowString(level)
+	case slog.LevelError:
+		level = color.RedString(level)
+	}
+
+	fields := make(map[string]interface{}, r.NumAttrs())
+
+	r.Attrs(func(a slog.Attr) bool {
+		fields[a.Key] = a.Value.Any()
+
+		return true
 	})
-	return instance
+
+	for _, a := range h.attrs {
+		fields[a.Key] = a.Value.Any()
+	}
+
+	var b []byte
+	var err error
+
+	if len(fields) > 0 {
+		b, err = json.MarshalIndent(fields, "", "  ")
+		if err != nil {
+			return err
+		}
+	}
+
+	timeStr := r.Time.Format("[15:05:05.000]")
+	msg := color.CyanString(r.Message)
+
+	h.l.Println(
+		timeStr,
+		level,
+		msg,
+		color.WhiteString(string(b)),
+	)
+
+	return nil
+}
+
+func (h *PrettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &PrettyHandler{
+		Handler: h.Handler,
+		l:       h.l,
+		attrs:   attrs,
+	}
+}
+
+func (h *PrettyHandler) WithGroup(name string) slog.Handler {
+	// TODO: implement
+	return &PrettyHandler{
+		Handler: h.Handler.WithGroup(name),
+		l:       h.l,
+	}
 }

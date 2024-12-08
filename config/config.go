@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Storage
 	Server
+	Logger
 }
 
 type Storage struct {
@@ -18,10 +19,15 @@ type Storage struct {
 	DBName   string
 	SSLMode  string
 }
+
 type Server struct {
 	Address     string
 	Timeout     time.Duration
 	IdleTimeout time.Duration
+}
+
+type Logger struct {
+	Env string
 }
 
 func MustLoad() *Config {
@@ -38,6 +44,9 @@ func MustLoad() *Config {
 			Address:     getEnv("address", ""),
 			Timeout:     getEnvAsTime("timeout", "4s"),
 			IdleTimeout: getEnvAsTime("idle_timeout", "60s"),
+		},
+		Logger: Logger{
+			Env: getEnv("env", "debug"),
 		},
 	}
 }

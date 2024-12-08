@@ -3,26 +3,29 @@ package server
 import (
 	"context"
 	"database/sql"
-	"music-library/config"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"music-library/config"
+	"music-library/pkg/logger/sl"
+
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
 	gin    *gin.Engine
 	cfg    *config.Config
 	db     *sql.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
-func NewServer(cfg *config.Config, db *sql.DB, logger *logrus.Logger) *Server {
-	return &Server{gin: gin.New(),
+func NewServer(cfg *config.Config, db *sql.DB, logger *slog.Logger) *Server {
+	return &Server{
+		gin:    gin.New(),
 		cfg:    cfg,
 		db:     db,
 		logger: logger,
@@ -39,9 +42,9 @@ func (s *Server) Run() error {
 	}
 
 	go func() {
-		s.logger.Infof("Server is listening on PORT: http://%s", s.cfg.Server.Address)
+		s.logger.Info("Server is listening", "address", s.cfg.Server.Address)
 		if err := server.ListenAndServe(); err != nil {
-			s.logger.Fatalf("Error starting Server: %v", err)
+			s.logger.Error("Error starting Server", sl.Err(err))
 		}
 	}()
 

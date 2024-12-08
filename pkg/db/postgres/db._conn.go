@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"music-library/config"
-	"music-library/pkg/logger"
 
 	"database/sql"
 
@@ -18,7 +17,8 @@ import (
 )
 
 func InitDB(cfg *config.Config) (*sql.DB, error) {
-	log := logger.GetLogger()
+	const op = "db.postgres.Init"
+
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		cfg.User,
 		cfg.Password,
@@ -30,14 +30,18 @@ func InitDB(cfg *config.Config) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatalf("Error: Unable to connect to database: %s", err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	migrator := MustGetNewMigrator(MigrationsFS, migrationsDir)
 
 	err = migrator.ApplyMigrations(db)
 	if err != nil {
-		log.Fatalf("Error: Unable to do migrations: %s", err)
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return db, nil
@@ -72,10 +76,6 @@ func (m *Migrator) ApplyMigrations(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("unable to create migration: %v", err)
 	}
-
-	defer func() {
-		migrator.Close()
-	}()
 
 	if err = migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("unable to apply migrations %v", err)

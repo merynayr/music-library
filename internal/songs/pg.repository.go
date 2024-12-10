@@ -8,6 +8,8 @@ import (
 // Songs Repository
 type Repository interface {
 	AddGroupWithSongsTx(group *models.Group, song *models.Song) (*models.Song, error)
-	AddSong(tx *sql.Tx, song *models.Song) (*models.Song, error)
+	AddSong(tx *sql.Tx, groupID int, song *models.Song) (*models.Song, error)
 	CreateGroup(tx *sql.Tx, group *models.Group) (int, error)
+	DeleteSong(id uint) error
+	GetSongs() ([]models.Song, error)
 }

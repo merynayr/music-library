@@ -9,7 +9,7 @@ import (
 	"music-library/internal/songs"
 	resp "music-library/pkg/api"
 	"music-library/pkg/logger/sl"
-	"time"
+	"strconv"
 
 	"log/slog"
 	"net/http"
@@ -51,53 +51,23 @@ func (h songsHandlers) AddSong() gin.HandlerFunc {
 		var req Request
 		if err := c.ShouldBindJSON(&req); err != nil {
 			log.Error("Failed to bind JSON: ", sl.Err(err))
-			c.JSON(http.StatusBadRequest, resp.Error(err))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 			return
 		}
 
 		log.Debug("Request body decoded", slog.Any("request", req))
 
-		// songDetail, err := GetSongInfoFromAPI(h, req)
-		// if err != nil {
-		// 	log.Error("Failed to get song info from external API", sl.Err(err))
-		// 	c.JSON(http.StatusInternalServerError, resp.Error(err))
-		// 	return
-		// }
-		// log.Debug("Retrieved song details from external API", slog.Any("request", songDetail))
-		// songDetail.SongName = req.Song
+		songDetail, err := GetSongInfoFromAPI(h, req)
+		if err != nil {
+			log.Error("Failed to get song info from external API", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid info request body"})
+			return
+		}
+		log.Debug("Retrieved song details from external API", slog.Any("request", songDetail))
+		songDetail.SongName = req.Song
 
 		group := &models.Group{Name: req.Group}
-		// createdGroup, err := h.songsUC.CreateGroup(n)
-		// if err != nil {
-		// 	log.Error("Failed to create group", sl.Err(err))
-		// 	c.JSON(http.StatusBadRequest, err.Error())
-		// 	return
-		// }
 
-		ReleaseDate, _ := time.Parse("16.07.2006", "16.07.2006")
-		Text := "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight"
-		Link := "https://www.youtube.com/watch?v=Xsp3_a-PMTw"
-		songDetail := models.Song{
-			SongName:    req.Song,
-			ReleaseDate: ReleaseDate,
-			Text:        Text,
-			Link:        Link,
-		}
-
-		// song := &models.Song{
-		// 	GroupId:     createdGroup,
-		// 	SongName:    req.Song,
-		// 	ReleaseDate: songDetail.ReleaseDate,
-		// 	Text:        songDetail.Text,
-		// 	Link:        songDetail.Link,
-		// }
-
-		// createdSongs, err := h.songsUC.AddSong(song)
-		// if err != nil {
-		// 	log.Error("Failed to create users", sl.Err(err))
-		// 	c.JSON(http.StatusBadRequest, err.Error())
-		// 	return
-		// }
 		createdSongs, err := h.songsUC.AddGroupWithSongsTx(group, &songDetail)
 		if err != nil {
 			log.Error("Failed to add group and songs", sl.Err(err))
@@ -109,92 +79,6 @@ func (h songsHandlers) AddSong() gin.HandlerFunc {
 	}
 }
 
-// // @Router /songs/create [post]
-// func (h songsHandlers) AddSong() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		op := "songsHandlers.AddSong"
-// 		log := h.log.With(slog.String("op", op))
-
-// 		// Читаем запрос
-// 		var req Request
-// 		if err := c.ShouldBindJSON(&req); err != nil {
-// 			log.Error("Failed to bind JSON", sl.Err(err))
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-// 			return
-// 		}
-
-// 		// Логика транзакции
-// 		tx, err := h.db.Begin()
-// 		if err != nil {
-// 			log.Error("Failed to begin transaction", sl.Err(err))
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-// 			return
-// 		}
-// 		defer func() {
-// 			if err != nil {
-// 				tx.Rollback()
-// 			} else {
-// 				tx.Commit()
-// 			}
-// 		}()
-
-// 		// log.Debug("Request body decoded", slog.Any("request", req))
-
-// 		// songDetail, err := GetSongInfoFromAPI(h, req)
-// 		// if err != nil {
-// 		// 	log.Error("Failed to get song info from external API", sl.Err(err))
-// 		// 	c.JSON(http.StatusInternalServerError, resp.Error(err))
-// 		// 	return
-// 		// }
-// 		// log.Debug("Retrieved song details from external API", slog.Any("request", songDetail))
-
-// 		n := &models.Group{Name: req.Group}
-// 		createdGroup, err := h.songsUC.CreateGroup(n)
-// 		if err != nil {
-// 			log.Error("Failed to create group", sl.Err(err))
-// 			c.JSON(http.StatusBadRequest, err.Error())
-// 			return
-// 		}
-
-// 		ReleaseDate, _ := time.Parse("16.07.2006", "16.07.2006")
-// 		Text := "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight"
-// 		Link := "https://www.youtube.com/watch?v=Xsp3_a-PMTw"
-// 		songDetail := models.Song{
-// 			ReleaseDate: ReleaseDate,
-// 			Text:        Text,
-// 			Link:        Link,
-// 		}
-
-// 		// Создаем песню
-// 		song := &models.Song{
-// 			GroupId:     createdGroup,
-// 			SongName:    req.Song,
-// 			ReleaseDate: songDetail.ReleaseDate, // Предполагается, что дата передается в запросе
-// 			Text:        songDetail.Text,
-// 			Link:        songDetail.Link,
-// 		}
-
-// 		createdSongs, err := h.songsUC.AddSong(tx, song)
-// 		if err != nil {
-// 			log.Error("Failed to add song", sl.Err(err))
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create song"})
-// 			return
-// 		}
-
-// 		c.JSON(http.StatusCreated, gin.H{"data": createdSongs})
-// 	}
-// }
-
-// // @Router /songs/hello [get]
-// func (h songsHandlers) Hello() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		op := "songsHandlers.Create"
-// 		h.logger.Info("логгер работает!")
-// 		h.logger.Error("Failed to get users", "err")
-// 		c.JSON(http.StatusCreated, "Hello my friend")
-// 	}
-// }
-
 func GetSongInfoFromAPI(h songsHandlers, req Request) (models.Song, error) {
 	op := "songsHandlers.GetSongInfoFromAPI"
 
@@ -203,7 +87,7 @@ func GetSongInfoFromAPI(h songsHandlers, req Request) (models.Song, error) {
 	)
 	group, song := req.Group, req.Song
 
-	url := fmt.Sprintf("http://%s/info?group=%s&song=%s", h.cfg.Address, url.QueryEscape(group), url.QueryEscape(song))
+	url := fmt.Sprintf("http://localhost:8080/info?group=%s&song=%s", url.QueryEscape(group), url.QueryEscape(song))
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -226,4 +110,51 @@ func GetSongInfoFromAPI(h songsHandlers, req Request) (models.Song, error) {
 	}
 
 	return songDetail, nil
+}
+
+// @Router /songs/delete/:id [delete]
+func (h songsHandlers) DeleteSong() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		op := "songsHandlers.DeleteSong"
+
+		log := h.log.With(
+			slog.String("op", op),
+		)
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			log.Error("Failed to parse id", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete song"})
+			return
+		}
+		log.Debug("Request to delete song with ID", slog.Any("request", id))
+
+		err = h.songsUC.DeleteSong(uint(id))
+		if err != nil {
+			log.Error("Failed to delete songs", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete song"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Song deleted"})
+	}
+}
+
+// @Router /songs [get]
+func (h songsHandlers) GetSongs() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		op := "songsHandlers.GetSongs"
+
+		log := h.log.With(
+			slog.String("op", op),
+		)
+		songs, err := h.songsUC.GetSongs()
+		if err != nil {
+			log.Error("Failed to delete songs", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
+			return
+		}
+
+		c.JSON(http.StatusOK, songs)
+	}
 }

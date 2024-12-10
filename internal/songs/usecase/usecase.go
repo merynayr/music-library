@@ -27,3 +27,17 @@ func (s *songsUC) AddGroupWithSongsTx(group *models.Group, song *models.Song) (*
 
 	return song, nil
 }
+
+func (s *songsUC) DeleteSong(id uint) error {
+	err := s.songsRepo.DeleteSong(id)
+	return err
+}
+
+func (s *songsUC) GetSongs() ([]models.Song, error) {
+	songs, err := s.songsRepo.GetSongs()
+	if err != nil {
+		return nil, err
+	}
+
+	return songs, nil
+}

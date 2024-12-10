@@ -7,4 +7,6 @@ import (
 // Songs use case
 type UseCase interface {
 	AddGroupWithSongsTx(group *models.Group, song *models.Song) (*models.Song, error)
+	DeleteSong(id uint) error
+	GetSongs() ([]models.Song, error)
 }

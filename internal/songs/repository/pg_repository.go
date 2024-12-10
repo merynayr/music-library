@@ -46,8 +46,7 @@ func (r *songRepo) AddGroupWithSongsTx(group *models.Group, song *models.Song) (
 			return err
 		}
 
-		song.GroupId = groupID
-		result, err = r.AddSong(tx, song)
+		result, err = r.AddSong(tx, groupID, song)
 		if err != nil {
 			return err
 		}
@@ -57,20 +56,20 @@ func (r *songRepo) AddGroupWithSongsTx(group *models.Group, song *models.Song) (
 	return result, err
 }
 
-func (r *songRepo) AddSong(tx *sql.Tx, song *models.Song) (*models.Song, error) {
+func (r *songRepo) AddSong(tx *sql.Tx, groupID int, song *models.Song) (*models.Song, error) {
 	const op = "song.repository.postgres.AddSong"
 
 	var s models.Song
 	err := tx.QueryRow(
 		addSong,
-		song.GroupId,
+		groupID,
 		song.SongName,
 		song.ReleaseDate,
 		song.Text,
 		song.Link,
 	).Scan(
 		&s.ID,
-		&s.GroupId,
+		&s.GroupName,
 		&s.SongName,
 		&s.ReleaseDate,
 		&s.Text,
@@ -96,4 +95,44 @@ func (r *songRepo) CreateGroup(tx *sql.Tx, group *models.Group) (int, error) {
 	}
 
 	return groupID, nil
+}
+
+func (r *songRepo) DeleteSong(id uint) error {
+	const op = "song.repository.postgres.DeleteSong"
+
+	result, err := r.db.Exec(deleteSongQuery, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func (r *songRepo) GetSongs() ([]models.Song, error) {
+	const op = "song.repository.postgres.GetSongs"
+
+	var args []interface{}
+	rows, err := r.db.Query(getSongsQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	var songs []models.Song
+	for rows.Next() {
+		var song models.Song
+		if err := rows.Scan(&song.ID, &song.GroupName, &song.SongName, &song.ReleaseDate, &song.Text, &song.Link); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		songs = append(songs, song)
+	}
+
+	return songs, nil
 }

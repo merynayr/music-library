@@ -41,3 +41,17 @@ func (s *songsUC) GetSongs() ([]models.Song, error) {
 
 	return songs, nil
 }
+
+func (s *songsUC) GetSongText(id string) (string, error) {
+	text, err := s.songsRepo.GetSongText(id)
+	if err != nil {
+		return "", err
+	}
+
+	return text, nil
+}
+
+func (s *songsUC) UpdateSong(id string, Data map[string]interface{}) error {
+	err := s.songsRepo.UpgradeGroupWithSongsTx(id, Data)
+	return err
+}

@@ -61,7 +61,7 @@ func (r *songRepo) AddSong(tx *sql.Tx, groupID int, song *models.Song) (*models.
 
 	var s models.Song
 	err := tx.QueryRow(
-		addSong,
+		addSongQuery,
 		groupID,
 		song.SongName,
 		song.ReleaseDate,
@@ -85,12 +85,13 @@ func (r *songRepo) CreateGroup(tx *sql.Tx, group *models.Group) (int, error) {
 
 	var groupID int
 	err := r.db.QueryRow(checkExistGroup, group.Name).Scan(&groupID)
-	if err == sql.ErrNoRows {
-		err = tx.QueryRow(createGroup, group.Name).Scan(&groupID)
+	switch {
+	case err == sql.ErrNoRows:
+		err = tx.QueryRow(createGroupQuery, group.Name).Scan(&groupID)
 		if err != nil {
 			return -1, fmt.Errorf("%s: %w", op, err)
 		}
-	} else if err != nil {
+	case err != nil:
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -135,4 +136,78 @@ func (r *songRepo) GetSongs() ([]models.Song, error) {
 	}
 
 	return songs, nil
+}
+
+func (r *songRepo) GetSongText(id string) (string, error) {
+	const op = "song.repository.postgres.GetSongText"
+
+	var text string
+	row := r.db.QueryRow(getSongTextQuery, id)
+	err := row.Scan(&text)
+	switch {
+	case err == sql.ErrNoRows:
+		return "", fmt.Errorf("%s: %w", op, err)
+	case err != nil:
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+	return text, nil
+}
+
+func (r *songRepo) UpgradeGroupWithSongsTx(id string, Data map[string]interface{}) error {
+	err := r.execTx(func(tx *sql.Tx) error {
+		if value, exists := Data["group"]; exists {
+			err := r.UpdateGroup(tx, id, value)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := r.UpdateSong(tx, id, Data)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	return err
+}
+
+func (r *songRepo) UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}) error {
+	const op = "song.repository.postgres.UpdateSong"
+	result, err := r.db.Exec(
+		updateSongQuery,
+		Data["song"],
+		Data["releaseDate"],
+		Data["text"],
+		Data["link"],
+		id,
+	)
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
+func (r *songRepo) UpdateGroup(tx *sql.Tx, id string, GroupName interface{}) error {
+	const op = "song.repository.postgres.UpdateGroup"
+	result, err := r.db.Exec(updateGroupQuery, GroupName, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }

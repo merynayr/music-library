@@ -158,3 +158,53 @@ func (h songsHandlers) GetSongs() gin.HandlerFunc {
 		c.JSON(http.StatusOK, songs)
 	}
 }
+
+// @Router /songs/{id}/text [get]
+func (h songsHandlers) GetSongText() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		op := "songsHandlers.GetSongText"
+		log := h.log.With(
+			slog.String("op", op),
+		)
+
+		id := c.Param("id")
+
+		text, err := h.songsUC.GetSongText(id)
+		if err != nil {
+			log.Error("Failed to get song`s text", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get song`s text"})
+			return
+		}
+		c.JSON(http.StatusOK, text)
+
+	}
+}
+
+// @Router /songs/:id [put]
+func (h songsHandlers) UpdateSong() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		op := "songsHandlers.UpdateSong"
+
+		log := h.log.With(
+			slog.String("op", op),
+		)
+
+		id := c.Param("id")
+
+		var Data map[string]interface{}
+		if err := c.ShouldBindJSON(&Data); err != nil {
+			log.Error("Failed to bind JSON: ", sl.Err(err))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+			return
+		}
+
+		err := h.songsUC.UpdateSong(id, Data)
+		if err != nil {
+			log.Error("Failed to update songs", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update song"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Update successful"})
+	}
+}

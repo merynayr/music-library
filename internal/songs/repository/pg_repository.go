@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"music-library/internal/models"
 	"music-library/internal/songs"
+	"music-library/pkg/utils"
+	"strings"
 )
 
 // News Repository
@@ -69,7 +71,6 @@ func (r *songRepo) AddSong(tx *sql.Tx, groupID int, song *models.Song) (*models.
 		song.Link,
 	).Scan(
 		&s.ID,
-		&s.GroupName,
 		&s.SongName,
 		&s.ReleaseDate,
 		&s.Text,
@@ -117,28 +118,33 @@ func (r *songRepo) DeleteSong(id uint) error {
 	return nil
 }
 
-func (r *songRepo) GetSongs() ([]models.Song, error) {
+func (r *songRepo) GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error) {
 	const op = "song.repository.postgres.GetSongs"
 
-	var args []interface{}
-	rows, err := r.db.Query(getSongsQuery, args...)
+	rows, err := r.db.Query(getSongsQuery, pq.GetOffset(), pq.GetLimit())
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
+	defer rows.Close()
 
-	var songs []models.Song
+	var songsList = make(map[string][]*models.Song, pq.GetSize())
 	for rows.Next() {
-		var song models.Song
-		if err := rows.Scan(&song.ID, &song.GroupName, &song.SongName, &song.ReleaseDate, &song.Text, &song.Link); err != nil {
+		song := &models.Song{}
+		group := &models.Group{}
+		if err := rows.Scan(&song.ID, &group.Name, &song.SongName, &song.ReleaseDate, &song.Text, &song.Link); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		songs = append(songs, song)
+		songsList[group.Name] = append(songsList[group.Name], song)
 	}
 
-	return songs, nil
+	return &models.SongsList{
+		Page:  pq.GetPage(),
+		Size:  pq.GetSize(),
+		Songs: songsList,
+	}, nil
 }
 
-func (r *songRepo) GetSongText(id string) (string, error) {
+func (r *songRepo) GetSongText(id string, pq *utils.PaginationQuery) (string, error) {
 	const op = "song.repository.postgres.GetSongText"
 
 	var text string
@@ -150,7 +156,26 @@ func (r *songRepo) GetSongText(id string) (string, error) {
 	case err != nil:
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	return text, nil
+
+	verses := strings.Split(text, "\n\n")
+
+	start := pq.GetOffset()
+	if start >= len(verses) {
+		errStr := fmt.Sprintf("No verses on page %d", pq.Page)
+		err := fmt.Errorf("%s", errStr)
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	end := start + pq.Size
+	if end > len(verses) {
+		end = len(verses)
+	}
+
+	paginatedVerses := ""
+	for i := start; i < end; i++ {
+		paginatedVerses += verses[i]
+	}
+	return paginatedVerses, nil
 }
 
 func (r *songRepo) UpgradeGroupWithSongsTx(id string, Data map[string]interface{}) error {
@@ -196,9 +221,9 @@ func (r *songRepo) UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}
 	return nil
 }
 
-func (r *songRepo) UpdateGroup(tx *sql.Tx, id string, GroupName interface{}) error {
+func (r *songRepo) UpdateGroup(tx *sql.Tx, id string, GroupID interface{}) error {
 	const op = "song.repository.postgres.UpdateGroup"
-	result, err := r.db.Exec(updateGroupQuery, GroupName, id)
+	result, err := r.db.Exec(updateGroupQuery, GroupID, id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

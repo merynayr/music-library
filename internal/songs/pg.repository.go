@@ -3,6 +3,7 @@ package songs
 import (
 	"database/sql"
 	"music-library/internal/models"
+	"music-library/pkg/utils"
 )
 
 // Songs Repository
@@ -13,8 +14,8 @@ type Repository interface {
 
 	DeleteSong(id uint) error
 
-	GetSongs() ([]models.Song, error)
-	GetSongText(id string) (string, error)
+	GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error)
+	GetSongText(id string, pq *utils.PaginationQuery) (string, error)
 
 	UpgradeGroupWithSongsTx(id string, Data map[string]interface{}) error
 	UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}) error

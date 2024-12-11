@@ -9,6 +9,7 @@ import (
 	"music-library/internal/songs"
 	resp "music-library/pkg/api"
 	"music-library/pkg/logger/sl"
+	"music-library/pkg/utils"
 	"strconv"
 
 	"log/slog"
@@ -148,7 +149,13 @@ func (h songsHandlers) GetSongs() gin.HandlerFunc {
 		log := h.log.With(
 			slog.String("op", op),
 		)
-		songs, err := h.songsUC.GetSongs()
+
+		pq, err := utils.GetPaginationFromCtx(c.Copy())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
+		}
+
+		songs, err := h.songsUC.GetSongs(pq)
 		if err != nil {
 			log.Error("Failed to delete songs", sl.Err(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
@@ -169,7 +176,14 @@ func (h songsHandlers) GetSongText() gin.HandlerFunc {
 
 		id := c.Param("id")
 
-		text, err := h.songsUC.GetSongText(id)
+		pq, err := utils.GetPaginationFromCtx(c.Copy())
+		if err != nil {
+			log.Error("Failed to get song`s text", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
+			return
+		}
+
+		text, err := h.songsUC.GetSongText(id, pq)
 		if err != nil {
 			log.Error("Failed to get song`s text", sl.Err(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get song`s text"})

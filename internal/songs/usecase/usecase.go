@@ -5,6 +5,7 @@ import (
 	"music-library/config"
 	"music-library/internal/models"
 	"music-library/internal/songs"
+	"music-library/pkg/utils"
 )
 
 // News UseCase
@@ -33,8 +34,8 @@ func (s *songsUC) DeleteSong(id uint) error {
 	return err
 }
 
-func (s *songsUC) GetSongs() ([]models.Song, error) {
-	songs, err := s.songsRepo.GetSongs()
+func (s *songsUC) GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error) {
+	songs, err := s.songsRepo.GetSongs(pq)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +43,8 @@ func (s *songsUC) GetSongs() ([]models.Song, error) {
 	return songs, nil
 }
 
-func (s *songsUC) GetSongText(id string) (string, error) {
-	text, err := s.songsRepo.GetSongText(id)
+func (s *songsUC) GetSongText(id string, pq *utils.PaginationQuery) (string, error) {
+	text, err := s.songsRepo.GetSongText(id, pq)
 	if err != nil {
 		return "", err
 	}

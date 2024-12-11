@@ -3,7 +3,7 @@ package repository
 const (
 	addSongQuery = `INSERT INTO songs (group_id, song, release_date, text, link)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING *`
+		RETURNING id, song, release_date, text, link`
 
 	createGroupQuery = `INSERT INTO groups (name) VALUES ($1) RETURNING id`
 
@@ -21,6 +21,7 @@ const (
 	FROM songs 
 	JOIN groups ON songs.group_id = groups.id 
 	WHERE 1=1
+	ORDER BY group_name, song OFFSET $1 LIMIT $2
 	`
 
 	getSongTextQuery = `SELECT text FROM songs WHERE id = $1`

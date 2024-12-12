@@ -152,10 +152,18 @@ func (h songsHandlers) GetSongs() gin.HandlerFunc {
 
 		pq, err := utils.GetPaginationFromCtx(c.Copy())
 		if err != nil {
+			log.Error("Failed to GetPaginationFromCtx", sl.Err(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
+			return
 		}
 
-		songs, err := h.songsUC.GetSongs(pq)
+		fq, err := utils.GetFilterFromCtx(c.Copy())
+		if err != nil {
+			log.Error("Failed to GetFilterFromCtx", sl.Err(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})
+			return
+		}
+		songs, err := h.songsUC.GetSongs(pq, fq)
 		if err != nil {
 			log.Error("Failed to delete songs", sl.Err(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get songs"})

@@ -14,10 +14,10 @@ type Repository interface {
 
 	DeleteSong(id uint) error
 
-	GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error)
+	GetSongs(pq *utils.PaginationQuery, fq *utils.FilterQuery) (*models.SongsList, error)
 	GetSongText(id string, pq *utils.PaginationQuery) (string, error)
 
 	UpgradeGroupWithSongsTx(id string, Data map[string]interface{}) error
 	UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}) error
-	UpdateGroup(tx *sql.Tx, id string, GroupName interface{}) error
+	GetGroupID(tx *sql.Tx, id string, GroupName interface{}) (int, error)
 }

@@ -34,8 +34,8 @@ func (s *songsUC) DeleteSong(id uint) error {
 	return err
 }
 
-func (s *songsUC) GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error) {
-	songs, err := s.songsRepo.GetSongs(pq)
+func (s *songsUC) GetSongs(pq *utils.PaginationQuery, fq *utils.FilterQuery) (*models.SongsList, error) {
+	songs, err := s.songsRepo.GetSongs(pq, fq)
 	if err != nil {
 		return nil, err
 	}

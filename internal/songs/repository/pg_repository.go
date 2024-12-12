@@ -118,10 +118,9 @@ func (r *songRepo) DeleteSong(id uint) error {
 	return nil
 }
 
-func (r *songRepo) GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error) {
+func (r *songRepo) GetSongs(pq *utils.PaginationQuery, fq *utils.FilterQuery) (*models.SongsList, error) {
 	const op = "song.repository.postgres.GetSongs"
-
-	rows, err := r.db.Query(getSongsQuery, pq.GetOffset(), pq.GetLimit())
+	rows, err := r.db.Query(getSongsQuery, fq.Group, fq.SongName, fq.ReleaseDate, fq.Text, fq.Link, pq.GetOffset(), pq.GetLimit())
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -180,14 +179,22 @@ func (r *songRepo) GetSongText(id string, pq *utils.PaginationQuery) (string, er
 
 func (r *songRepo) UpgradeGroupWithSongsTx(id string, Data map[string]interface{}) error {
 	err := r.execTx(func(tx *sql.Tx) error {
+		var groupID int
+		var err error
 		if value, exists := Data["group"]; exists {
-			err := r.UpdateGroup(tx, id, value)
+			groupID, err = r.GetGroupID(tx, id, value)
 			if err != nil {
 				return err
 			}
+			if groupID == -1 {
+				Data["group"] = ""
+			} else {
+				Data["group"] = groupID
+			}
+			fmt.Println(groupID, Data)
 		}
 
-		err := r.UpdateSong(tx, id, Data)
+		err = r.UpdateSong(tx, id, Data)
 		if err != nil {
 			return err
 		}
@@ -201,6 +208,7 @@ func (r *songRepo) UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}
 	const op = "song.repository.postgres.UpdateSong"
 	result, err := r.db.Exec(
 		updateSongQuery,
+		Data["group"],
 		Data["song"],
 		Data["releaseDate"],
 		Data["text"],
@@ -221,18 +229,28 @@ func (r *songRepo) UpdateSong(tx *sql.Tx, id string, Data map[string]interface{}
 	return nil
 }
 
-func (r *songRepo) UpdateGroup(tx *sql.Tx, id string, GroupID interface{}) error {
+func (r *songRepo) GetGroupID(tx *sql.Tx, id string, GroupName interface{}) (int, error) {
 	const op = "song.repository.postgres.UpdateGroup"
-	result, err := r.db.Exec(updateGroupQuery, GroupID, id)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+	var groupID int
+	err := r.db.QueryRow(checkExistGroup, GroupName).Scan(&groupID)
+	switch {
+	case err == sql.ErrNoRows:
+		err = fmt.Errorf("%s", "Такой группы не сущуствует")
+		return -1, fmt.Errorf("%s: %w", op, err)
+	case err != nil:
+		return -1, fmt.Errorf("%s: %w", op, err)
 	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-	return nil
+	return groupID, nil
+	// result, err := r.db.Exec(updateGroupQuery, GroupID, id)
+	// if err != nil {
+	// 	return fmt.Errorf("%s: %w", op, err)
+	// }
+	// rowsAffected, err := result.RowsAffected()
+	// if err != nil {
+	// 	return fmt.Errorf("%s: %w", op, err)
+	// }
+	// if rowsAffected == 0 {
+	// 	return fmt.Errorf("%s: %w", op, err)
+	// }
+	// return nil
 }

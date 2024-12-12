@@ -9,7 +9,7 @@ import (
 type UseCase interface {
 	AddGroupWithSongsTx(group *models.Group, song *models.Song) (*models.Song, error)
 	DeleteSong(id uint) error
-	GetSongs(pq *utils.PaginationQuery) (*models.SongsList, error)
+	GetSongs(pq *utils.PaginationQuery, fq *utils.FilterQuery) (*models.SongsList, error)
 	GetSongText(id string, pq *utils.PaginationQuery) (string, error)
 	UpdateSong(id string, Data map[string]interface{}) error
 }

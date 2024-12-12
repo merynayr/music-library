@@ -11,8 +11,15 @@ import (
 	"music-library/pkg/logger/sl"
 
 	"github.com/joho/godotenv"
+
+	_ "music-library/docs"
 )
 
+// @title Music Service API
+// @version 1.0
+// @description This is a service to manage songs in a library.
+// @host localhost:8088
+// @BasePath /
 func main() {
 	// init config
 	if err := godotenv.Load(".env"); err != nil {

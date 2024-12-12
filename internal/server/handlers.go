@@ -6,6 +6,9 @@ import (
 	songsUseCase "music-library/internal/songs/usecase"
 
 	"github.com/gin-gonic/gin"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func (s *Server) MapHandlers(g *gin.Engine) error {
@@ -19,6 +22,8 @@ func (s *Server) MapHandlers(g *gin.Engine) error {
 	// Init handlers
 	songsHandlers := songsHttp.NewSongsHandlers(s.cfg, songsUC, s.logger)
 
+	// URL: /swagger/index.html
+	g.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	v1 := g.Group("/api")
 
 	songsGroup := v1.Group("/songs")

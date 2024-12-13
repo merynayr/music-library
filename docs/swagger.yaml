@@ -1,0 +1,209 @@
+basePath: /
+definitions:
+  api.Response:
+    properties:
+      error:
+        type: string
+      status:
+        type: string
+    type: object
+  models.Song:
+    properties:
+      id:
+        type: integer
+      link:
+        type: string
+      releaseDate:
+        type: string
+      song:
+        type: string
+      text:
+        type: string
+    type: object
+host: localhost:8088
+info:
+  contact: {}
+  description: This is a service to manage songs in a library.
+  title: Music Service API
+  version: "1.0"
+paths:
+  /api/songs:
+    get:
+      description: Retrieves a paginated list of songs with optional filtering based
+        on group, song name, release date, text, and link
+      parameters:
+      - description: Group name for filtering
+        in: query
+        name: groupName
+        type: string
+      - description: Song name for filtering
+        in: query
+        name: song
+        type: string
+      - description: Release date for filtering
+        in: query
+        name: releaseDate
+        type: string
+      - description: Text for filtering
+        in: query
+        name: text
+        type: string
+      - description: Link for filtering
+        in: query
+        name: link
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of songs per page
+        in: query
+        name: size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Song'
+        "404":
+          description: Failed to get song
+          schema:
+            $ref: '#/definitions/api.Response'
+        "500":
+          description: Failed to get songs
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Get songs list with filtering and pagination
+      tags:
+      - songs
+  /api/songs/:id:
+    put:
+      consumes:
+      - application/json
+      description: Updates the song information by its ID. Only provided fields will
+        be updated.
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated song data
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/models.Song'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Song updated successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid JSON data
+          schema:
+            $ref: '#/definitions/api.Response'
+        "500":
+          description: Failed to update song
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Update song details
+      tags:
+      - songs
+  /api/songs/{id}/text:
+    get:
+      description: Retrieves the song's text, paginated by verses, based on the song's
+        ID
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 2
+        description: Number of verses per page
+        in: query
+        name: size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Failed to get song`s text
+          schema:
+            $ref: '#/definitions/api.Response'
+        "500":
+          description: Failed to get song`s text
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Get song text by verses with pagination
+      tags:
+      - songs
+  /api/songs/create:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new song with details like group, song name, release date,
+        text, and link
+      parameters:
+      - description: Song details
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/models.Song'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Song created successfully
+          schema:
+            $ref: '#/definitions/models.Song'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/api.Response'
+        "500":
+          description: Failed to call external API or insert data into database
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Add a new song to the library
+      tags:
+      - songs
+  /api/songs/delete/:id:
+    delete:
+      description: Deletes a song from the database by its ID
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Song deleted successfully
+          schema:
+            type: string
+        "404":
+          description: Failed to delete song
+          schema:
+            $ref: '#/definitions/api.Response'
+        "500":
+          description: Failed to delete song
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Delete a song by ID
+      tags:
+      - songs
+swagger: "2.0"

@@ -98,7 +98,7 @@ func GetSongInfoFromAPI(h songsHandlers, req Request) (models.Song, error) {
 	)
 	group, song := req.Group, req.Song
 
-	url := fmt.Sprintf("http://localhost:8080/info?group=%s&song=%s", url.QueryEscape(group), url.QueryEscape(song))
+	url := fmt.Sprintf("http://music-api:8080/info?group=%s&song=%s", url.QueryEscape(group), url.QueryEscape(song))
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -276,7 +276,7 @@ func (h songsHandlers) UpdateSong() gin.HandlerFunc {
 		err := h.songsUC.UpdateSong(id, Data)
 		if err != nil {
 			log.Error("Failed to update songs", sl.Err(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update song"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Такой группы не существует"})
 			return
 		}
 
